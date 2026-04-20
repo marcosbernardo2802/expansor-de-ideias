@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <!-- ================= INÍCIO DO CÓDIGO CAMALEÃO ================= -->
+<script>
+    // CÓDIGO CAMALEÃO v8.0 (Desintegração Total de Títulos e Botões)
+    window.addEventListener('message', function(event) {
+        if (event.data) {
+            
+            if (event.data.action === 'setTheme') {
+                const theme = event.data.theme;
+                if (theme === 'light') {
+                    document.body.classList.add('light-theme');
+                    document.body.classList.remove('dark-theme');
+                } else {
+                    document.body.classList.remove('light-theme');
+                    document.body.classList.add('dark-theme');
+                }
+            }
+
+            if (event.data.isPortal === true) {
+                const seletores = [
+                    'header', 'footer', '.banner', '[class*="banner"]', 
+                    '.footer-links', '.theme-switcher', '#theme-toggle', '.back-to-top', 'nav',
+                    'a[href="/"]', 'a[href="index.html"]', 
+                    'a[href*="cronicasestelares"]'
+                ].join(', ');
+
+                document.querySelectorAll(seletores).forEach(function(el) { el.style.display = 'none'; });
+
+                const primeiroTitulo = document.querySelector('h1, h2, .title, .page-title, [class*="titulo"], .header-title');
+                if (primeiroTitulo) primeiroTitulo.style.display = 'none';
+
+                const todosElementos = document.querySelectorAll('a, button, h1, h2, h3, h4, span, div, p, strong, b');
+                todosElementos.forEach(function(el) {
+                    if (el.children.length > 1) return;
+                    const texto = el.textContent.toLowerCase().trim();
+                    const link = el.href ? el.href.toLowerCase() : '';
+                    if (texto === 'home' || texto === 'início' || texto === 'inicio' || texto === 'voltar ao portal' || link.includes('cronicasestelares.vercel.app')) {
+                        el.style.display = 'none';
+                    }
+                    const nomesProibidos = [
+                        'divisor de texto', 'formatador de texto', 'gerador de imagens', 'gerador de prompts',
+                        'conversor de roteiro para .srt', 'conversor para .srt', 'conversor srt',
+                        'remover silêncio do áudio', 'remover silêncio', 'variador de gmail',
+                        'apoio ao projeto', 'seja um protagonista'
+                    ];
+                    if (nomesProibidos.includes(texto)) el.style.display = 'none';
+                });
+
+                const camaleaoStyle = document.createElement('style');
+                camaleaoStyle.innerHTML = `
+                    html, body, main { background: transparent !important; background-color: transparent !important; }
+                    :root { --color-bg: transparent !important; --color-card-bg: #1e1e20 !important; --color-text: #e3e3e3 !important; --color-card-border: #333537 !important; --color-primary: #00f2fe !important; }
+                    body.light-theme { --color-card-bg: #f0f4f9 !important; --color-text: #1f1f1f !important; --color-card-border: #d1d9e0 !important; }
+                    .bg-white, .bg-gray-900, .bg-gray-800, .bg-[#0a0f18], .bg-[#101a2d] { background-color: var(--color-card-bg) !important; border-color: var(--color-card-border) !important; }
+                    .text-gray-900, .text-gray-800, .text-white, .text-gray-200 { color: var(--color-text) !important; }
+                `;
+                document.head.appendChild(camaleaoStyle);
+
+                const areaPrincipal = document.querySelector('main');
+                if (areaPrincipal) {
+                    areaPrincipal.style.paddingTop = '0.5rem';
+                    areaPrincipal.style.marginTop = '0';
+                }
+
+                document.documentElement.style.overflowY = 'hidden';
+                document.body.style.overflowY = 'hidden';
+
+                let ultimaAltura = 0;
+                function informarAltura() {
+                    const alturaAtual = document.body.scrollHeight;
+                    if (alturaAtual !== ultimaAltura && alturaAtual > 0) {
+                        ultimaAltura = alturaAtual;
+                        window.parent.postMessage({ action: 'resizeIframe', height: alturaAtual }, '*');
+                    }
+                }
+                informarAltura();
+                const observer = new MutationObserver(informarAltura);
+                observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+            }
+        }
+    });
+</script>
+<!-- ================= FIM DO CÓDIGO CAMALEÃO ================= -->
+    
+    <meta charset="UTF-8">
+    <title>Expansor de Ideias - Gerador de Prompts</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Transforme ideias simples em prompts profissionais detalhados para inteligências artificiais geradoras de imagens.">
+
+    <link rel="icon" href="https://raw.githubusercontent.com/marcosbernardo2802/portal/main/images/favicon.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        :root {
+            --color-bg: #0a0f18; --color-text: #e0e0e0; --color-primary: #b14dff; --color-secondary: #00f2fe; --color-danger: #e63946; --color-warning: #ffb74d;
+            --color-card-bg: rgba(16, 26, 45, 0.6); --color-card-border: #223354; --color-shadow: rgba(177, 77, 255, 0.2);
+            --color-copy-initial: #28a745; --color-copy-copied: #007bff; --color-action: #6c757d; --color-star: #ffd700;
+            --color-gradient: linear-gradient(135deg, #b14dff 0%, #4facfe 100%); --font-main: 'Exo 2', sans-serif;
+        }
+
+        body.light-theme {
+            --color-bg: #f4f7f9; --color-text: #333333; --color-primary: #8a2be2; --color-secondary: #005fbd; --color-danger: #d90429; --color-warning: #e65100;
+            --color-card-bg: rgba(255, 255, 255, 0.6); --color-card-border: #d1d9e0; --color-shadow: rgba(0, 0, 0, 0.1);
+            --color-copy-initial: #218838; --color-copy-copied: #0056b3; --color-action: #495057; --color-star: #ffc107;
+            --color-gradient: linear-gradient(135deg, #8a2be2 0%, #0082c8 100%);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--font-main); background-color: var(--color-bg); color: var(--color-text); line-height: 1.6; transition: 0.3s ease; min-height: 100vh; }
+        .container { width: 95%; max-width: 1000px; margin: 0 auto; padding: 2rem 1rem; }
+        
+        .floating-button { position: fixed; z-index: 1000; cursor: pointer; background-color: var(--color-card-bg); border: 1px solid var(--color-card-border); border-radius: 50%; width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; transition: all 0.3s ease; }
+        .floating-button:hover { transform: scale(1.1); box-shadow: 0 0 10px var(--color-shadow); }
+        .floating-button svg { width: 20px; height: 20px; fill: var(--color-primary); }
+        
+        .back-to-top { bottom: 20px; right: 20px; opacity: 0; visibility: hidden; transform: translateY(10px); }
+        .app-card { position: relative; background-color: var(--color-card-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--color-card-border); border-radius: 12px; padding: 2rem; margin-bottom: 2rem; box-shadow: 0 8px 25px rgba(0,0,0,0.1); transition: all 0.3s ease; }
+        .light-theme .app-card { box-shadow: 0 8px 25px var(--color-shadow); }
+        
+        .editor-history-actions { position: absolute; top: 20px; left: 20px; display: flex; gap: 8px; z-index: 10; }
+        .editor-hist-btn { background: var(--color-bg); border: 1px solid var(--color-card-border); color: var(--color-action); border-radius: 6px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; font-size: 1em; }
+        .editor-hist-btn:hover { color: var(--color-primary); border-color: var(--color-primary); background: rgba(177, 77, 255, 0.1); transform: translateY(-2px); }
+
+        .form-group { margin-bottom: 1.5rem; }
+        .label-wrapper { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 10px; }
+        .label-wrapper > label { font-size: 1.05em; font-weight: 700; color: var(--color-text); }
+        
+        textarea, input[type="text"], input[type="password"] { width: 100%; padding: 12px 15px; border-radius: 8px; font-size: 1em; background-color: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-card-border); transition: all 0.3s ease; font-family: var(--font-main); }
+        textarea { min-height: 140px; resize: vertical; }
+        textarea:focus, input[type="text"]:focus, input[type="password"]:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-shadow); }
+
+        .styled-select { width: 100%; padding: 10px 15px; border-radius: 8px; font-size: 0.95em; background-color: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-card-border); transition: all 0.3s ease; font-family: var(--font-main); appearance: none; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23b14dff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E"); background-repeat: no-repeat; background-position: right 10px top 50%; background-size: 10px auto; }
+        .styled-select:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-shadow); }
+
+        /* Ajuste Compacto da Chave API */
+        #apiKeyInput { padding: 8px 12px; font-size: 0.85em; padding-right: 35px; border-color: var(--color-card-border); }
+        #apiKeyInput:focus { border-color: var(--color-primary); }
+
+        .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 1.5rem; }
+
+        /* Integração de Visão e Personagem (Dimensões Reduzidas e Simétricas) */
+        .advanced-inputs-grid { display: grid; grid-template-columns: 110px 1fr; gap: 15px; margin-bottom: 1.5rem; align-items: stretch; }
+        @media (max-width: 768px) { .advanced-inputs-grid { grid-template-columns: 1fr; } }
+        
+        .advanced-inputs-grid .form-group { display: flex; flex-direction: column; margin-bottom: 0; }
+        
+        .vision-drop-zone { flex-grow: 1; border: 1px dashed var(--color-action); border-radius: 8px; padding: 8px; text-align: center; color: var(--color-action); cursor: pointer; transition: 0.3s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; background-color: rgba(0,0,0,0.1); width: 100%; min-height: 90px; }
+        .vision-drop-zone:hover, .vision-drop-zone.dragover { border-color: var(--color-primary); color: var(--color-primary); background-color: rgba(177, 77, 255, 0.05); }
+        .vision-drop-zone i { font-size: 1.6em; }
+        .vision-drop-zone span { font-size: 0.75em; font-weight: bold; line-height: 1.1; }
+        
+        .vision-preview-wrapper { flex-grow: 1; display: none; position: relative; width: 100%; min-height: 90px; border-radius: 8px; border: 1px solid var(--color-primary); overflow: hidden; }
+        .vision-preview-img { width: 100%; height: 100%; object-fit: cover; opacity: 0.7; position: absolute; top: 0; left: 0; }
+        .vision-remove-btn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--color-danger); color: #fff; border: none; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2; box-shadow: 0 2px 5px rgba(0,0,0,0.5); font-size: 0.85em; }
+        .vision-overlay-text { position: absolute; bottom: 4px; left: 0; width: 100%; text-align: center; font-size: 0.65em; font-weight: bold; text-shadow: 1px 1px 2px #000; color: #fff; z-index: 1; pointer-events: none; }
+
+        #characterSeedInput { flex-grow: 1; min-height: 90px; resize: none; padding: 10px 12px; font-size: 0.9em; width: 100%; }
+
+        .main-actions { display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end; }
+        .main-actions button { padding: 8px 16px; font-size: 0.95em; font-weight: 700; border-radius: 8px; border: none; cursor: pointer; transition: all 0.3s ease; color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .main-actions button:hover:not(:disabled) { transform: translateY(-2px); opacity: 0.9; box-shadow: 0 5px 15px var(--color-shadow); }
+        .main-actions button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+        .generate-btn { background: var(--color-gradient); }
+        .clear-btn { background-color: var(--color-action); }
+
+        .label-actions { display: flex; gap: 8px; align-items: center; }
+        .translate-icon-btn { background: none; border: none; font-size: 1.3em; cursor: pointer; transition: 0.2s; padding: 4px 8px; display: inline-flex; align-items: center; justify-content: center; color: var(--color-warning); }
+        .translate-icon-btn:hover:not(:disabled) { transform: scale(1.15); color: #ffca28; text-shadow: 0 0 10px rgba(255, 152, 0, 0.5); }
+
+        .api-get-link { font-size: 0.85em; color: var(--color-primary); text-decoration: none; font-weight: 700; transition: 0.3s; display: inline-flex; align-items: center; gap: 5px; }
+        .api-get-link:hover { color: var(--color-secondary); text-shadow: 0 0 8px var(--color-shadow); }
+
+        #message { text-align: center; font-weight: 600; min-height: 24px; margin-top: 1rem; border-radius: 8px; transition: 0.3s; }
+        #message.success { color: var(--color-copy-initial); padding: 10px; background: rgba(40, 167, 69, 0.1); border: 1px solid rgba(40, 167, 69, 0.3); }
+        #message.error { color: var(--color-danger); padding: 10px; background: rgba(230, 57, 70, 0.1); border: 1px solid rgba(230, 57, 70, 0.3); }
+
+        /* Output Area & Progress Bar */
+        #resultsContainer { display: none; margin-top: 2rem; animation: fadeIn 0.5s ease-out; }
+        .idea-result-section { background-color: rgba(0,0,0,0.15); border: 1px solid var(--color-card-border); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; }
+        .light-theme .idea-result-section { background-color: rgba(0,0,0,0.02); }
+        .idea-section-header { color: var(--color-text); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--color-card-border); display: flex; align-items: center; gap: 10px; }
+        .idea-section-header span.idea-text { font-weight: normal; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%; }
+        
+        .progress-bar-container { width: 100%; background-color: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid var(--color-card-border); height: 10px; margin-top: 15px; overflow: hidden; display: none; }
+        .progress-bar { height: 100%; background: var(--color-gradient); width: 0%; transition: width 0.4s ease; box-shadow: 0 0 10px var(--color-primary); }
+
+        .prompt-variant-card { background-color: var(--color-bg); border: 1px solid var(--color-card-border); border-left: 4px solid var(--color-primary); border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; position: relative; transition: 0.3s; }
+        .prompt-variant-card:last-child { margin-bottom: 0; }
+        .prompt-variant-card:hover { box-shadow: 0 5px 15px var(--color-shadow); transform: translateX(3px); }
+        .variant-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid var(--color-card-border); padding-bottom: 5px; }
+        .variant-title { font-weight: 700; color: var(--color-secondary); font-size: 1.1em; display: flex; align-items: center; gap: 6px; }
+        .variant-text { font-family: monospace; font-size: 0.95em; white-space: pre-wrap; color: var(--color-text); word-break: break-word; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 6px; border: 1px dashed var(--color-card-border); }
+        .light-theme .variant-text { background: rgba(0,0,0,0.03); }
+        
+        /* Modifiers Chips */
+        .modifiers-container { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .mod-chip { background: var(--color-card-bg); border: 1px solid var(--color-card-border); color: var(--color-text); padding: 4px 10px; border-radius: 20px; font-size: 0.75em; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .mod-chip:hover { border-color: var(--color-primary); color: var(--color-primary); background: rgba(177, 77, 255, 0.1); }
+
+        .copy-btn { background-color: var(--color-card-bg); color: var(--color-text); border: 1px solid var(--color-card-border); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+        .copy-btn:hover { background-color: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+        .copy-btn.copied { background-color: var(--color-copy-initial); border-color: var(--color-copy-initial); color: #fff; }
+
+        .translate-var-btn { background-color: var(--color-card-bg); color: var(--color-text); border: 1px solid var(--color-card-border); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+        .translate-var-btn:hover { background-color: rgba(255, 152, 0, 0.1); color: var(--color-warning); border-color: var(--color-warning); }
+
+        .video-var-btn { background-color: var(--color-card-bg); color: var(--color-text); border: 1px solid var(--color-card-border); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+        .video-var-btn:hover { background-color: rgba(230, 57, 70, 0.1); color: var(--color-danger); border-color: var(--color-danger); }
+        
+        .fav-var-btn { background-color: transparent; border: 1px solid transparent; color: var(--color-action); padding: 6px; border-radius: 50%; cursor: pointer; font-size: 1.1em; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .fav-var-btn:hover { color: var(--color-star); transform: scale(1.1); }
+        .fav-var-btn.is-fav { color: var(--color-star); text-shadow: 0 0 10px var(--color-star); }
+
+        .icon-square-btn { width: 36px; height: 36px; padding: 0 !important; justify-content: center; font-size: 1.1em; }
+
+        .video-action-input { width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px dashed var(--color-card-border); background-color: rgba(0,0,0,0.15); color: var(--color-text); margin-top: 10px; font-size: 0.9em; font-family: var(--font-main); transition: 0.3s; }
+        .video-action-input:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-shadow); background-color: var(--color-bg); }
+        .light-theme .video-action-input { background-color: rgba(0,0,0,0.02); }
+
+        .video-prompt-box { margin-top: 15px; border-top: 1px dashed var(--color-card-border); padding-top: 15px; display: none; animation: fadeIn 0.3s; }
+        .video-actions { display: flex; gap: 8px; margin-top: 8px; }
+
+        .loader-wrapper { display: none; text-align: center; margin: 2rem 0; }
+        .loader { display: inline-block; width: 48px; height: 48px; border: 5px solid var(--color-card-border); border-bottom-color: var(--color-primary); border-radius: 50%; animation: rotation 1s linear infinite; }
+        .loading-text { display: block; margin-top: 1rem; color: var(--color-primary); font-weight: 600; animation: pulse 1.5s infinite; }
+        
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        /* History & Favorites Tabs Area */
+        .history-card { display: none; }
+        .tabs-header { display: flex; gap: 10px; margin-bottom: 1.5rem; border-bottom: 1px solid var(--color-card-border); padding-bottom: 10px; }
+        .tab-btn { background: none; border: none; color: var(--color-action); font-size: 1.1em; font-weight: 700; cursor: pointer; padding: 5px 10px; transition: 0.3s; display: flex; align-items: center; gap: 8px; position: relative; }
+        .tab-btn:hover { color: var(--color-text); }
+        .tab-btn.active { color: var(--color-primary); }
+        .tab-btn.active::after { content: ''; position: absolute; bottom: -11px; left: 0; width: 100%; height: 3px; background: var(--color-primary); border-radius: 3px 3px 0 0; }
+        
+        .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px; }
+        .history-badge { background-color: var(--color-primary); color: var(--color-bg); font-size: 12px; padding: 3px 10px; border-radius: 12px; font-weight: 800; }
+        .light-theme .history-badge { color: #fff; }
+        .history-actions button { background-color: var(--color-action); color: #fff; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 600; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; margin-left: 5px; }
+        .history-actions button:hover { opacity: 0.9; transform: translateY(-2px); }
+        .btn-danger { background-color: var(--color-danger) !important; }
+
+        .tab-content { display: none; flex-direction: column; gap: 10px; }
+        .tab-content.active { display: flex; animation: fadeIn 0.3s; }
+
+        .history-item { background: var(--color-bg); border: 1px solid var(--color-card-border); border-radius: 8px; padding: 12px 15px; display: flex; flex-direction: column; gap: 8px; transition: 0.2s; }
+        .history-item:hover { border-color: var(--color-secondary); }
+        .history-item-top { display: flex; justify-content: space-between; align-items: flex-start; }
+        .history-idea { font-weight: 700; color: var(--color-text); font-size: 1.05em; margin-bottom: 5px; }
+        .history-prompt { font-family: monospace; font-size: 0.85em; color: var(--color-action); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; background: rgba(0,0,0,0.1); padding: 8px; border-radius: 4px; }
+        .history-date { font-size: 0.75em; color: var(--color-action); }
+        
+        /* Modal de Confirmação */
+        .confirm-modal { display: none; position: fixed; z-index: 3000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); align-items: center; justify-content: center; backdrop-filter: blur(5px); opacity: 0; transition: opacity 0.3s ease; }
+        .confirm-modal.show { display: flex; opacity: 1; }
+        .confirm-content { background-color: var(--color-card-bg); border: 1px solid var(--color-card-border); border-radius: 12px; padding: 2.5rem; max-width: 450px; text-align: center; box-shadow: 0 10px 40px rgba(0, 242, 254, 0.2); }
+        .confirm-content h3 { color: var(--color-danger); margin-bottom: 1rem; font-size: 1.3rem; }
+        .confirm-actions { display: flex; gap: 1rem; margin-top: 2rem; justify-content: center; }
+        .confirm-actions button { padding: 8px 16px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; color: #fff; font-size: 0.9em; }
+        .btn-yes { background-color: var(--color-danger); }
+        .btn-yes:hover { opacity: 0.8; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(230, 57, 70, 0.4); }
+        .btn-no { background-color: var(--color-action); }
+        .btn-no:hover { opacity: 0.8; transform: translateY(-2px); }
+    </style>
+</head>
+<body id="top">
+
+    <main class="container">
+        
+        <div class="app-card">
+            <div class="editor-history-actions">
+                <button type="button" id="undoBtn" class="editor-hist-btn" title="Desfazer (Ctrl+Z)"><i class="fas fa-undo"></i></button>
+                <button type="button" id="redoBtn" class="editor-hist-btn" title="Refazer (Ctrl+Y)"><i class="fas fa-redo"></i></button>
+            </div>
+            
+            <div class="form-group" style="margin-top: 3rem; margin-bottom: 1rem;">
+                <div class="label-wrapper" style="margin-bottom: 0.3rem;">
+                    <label for="apiKeyInput" style="font-size: 0.85em; font-weight: 600; color: var(--color-action);"><i class="fas fa-key"></i> Chave API Gemini (Opcional)</label>
+                    <div class="label-actions">
+                        <a href="https://aistudio.google.com/app/apikey" target="_top" onclick="window.open(this.href, '_blank', 'noopener,noreferrer'); return false;" class="api-get-link" title="Obter uma chave API gratuita no Google AI Studio" style="font-size: 0.8em;"><i class="fas fa-external-link-alt"></i> Obter Chave API</a>
+                    </div>
+                </div>
+                <div style="position: relative;">
+                    <input type="password" id="apiKeyInput" placeholder="Cole Aqui sua Chave API ou deixe em branco para modo teste..." style="width: 100%; padding-right: 40px; border-color: var(--color-secondary);">
+                    <button type="button" id="toggleApiKeyBtn" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--color-action); cursor: pointer; font-size: 0.9em; transition: 0.3s;">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <small style="color: var(--color-action); font-size: 0.85em; margin-top: 6px; display: block; font-style: italic;"><i class="fas fa-shield-alt"></i> Sua chave é salva localmente de forma segura no seu terminal.</small>
+            </div>
+
+            <div class="form-group">
+                <div class="label-wrapper">
+                    <label for="ideaInput"><i class="fas fa-lightbulb" style="color: var(--color-warning);"></i> O que deseja ver na imagem?</label>
+                    <div class="label-actions">
+                        <button type="button" id="translateBtn" class="translate-icon-btn" title="Traduzir Inteligente (Auto-deteta PT/EN)"><i class="fas fa-language"></i></button>
+                    </div>
+                </div>
+                <textarea id="ideaInput" placeholder="Exemplo:&#10;Um gato astronauta a beber café na lua...&#10;(deixe uma linha vazia para adicionar uma nova ideia em lote)&#10;&#10;Uma cidade flutuante com carros voadores luminosos..."></textarea>
+            </div>
+
+            <!-- Estúdio de Personagens & Engenharia Reversa -->
+            <div class="advanced-inputs-grid">
+                <div class="form-group" style="margin-bottom: 0; display: flex; flex-direction: column;">
+                    <label style="display: block; margin-bottom: 5px; font-size: 0.9em; font-weight: 600;"><i class="fas fa-eye"></i> Visão Visual</label>
+                    <div id="visionDropZone" class="vision-drop-zone" title="Clique ou arraste uma imagem para a IA analisar o estilo/sujeito.">
+                        <i class="fas fa-image"></i>
+                        <span>Anexar<br>Imagem</span>
+                    </div>
+                    <input type="file" id="visionInput" accept="image/*" style="display: none;">
+                    <div id="visionPreviewWrapper" class="vision-preview-wrapper">
+                        <img id="visionPreviewImg" class="vision-preview-img" alt="Análise Visual">
+                        <button id="visionRemoveBtn" class="vision-remove-btn" title="Remover Imagem"><i class="fas fa-times"></i></button>
+                        <div class="vision-overlay-text">Ativa</div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0; display: flex; flex-direction: column;">
+                    <label for="characterSeedInput" style="display: block; margin-bottom: 5px; font-size: 0.9em; font-weight: 600;"><i class="fas fa-user-astronaut"></i> Semente de Personagem (Opcional)</label>
+                    <textarea id="characterSeedInput" placeholder="Ex: Capitã de cabelo prateado e armadura azul escuro" title="A IA será forçada a manter este personagem em todas as variantes."></textarea>
+                </div>
+            </div>
+
+            <div class="settings-grid">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="styleSelect" style="display: block; margin-bottom: 5px; font-size: 0.9em; font-weight: 600;"><i class="fas fa-palette"></i> Estilo Artístico</label>
+                    <select id="styleSelect" class="styled-select">
+                        <option value="Photorealistic, ultra-detailed, 8k resolution, award-winning photography">Fotorrealista / Realidade</option>
+                        <option value="Cinematic movie still, epic composition, dramatic atmosphere, depth of field">Cinematográfico</option>
+                        <option value="High-tech sci-fi, futuristic concept art, space opera, advanced technology, highly detailed">Sci-Fi (Ficção Científica)</option>
+                        <option value="Star Trek aesthetic, cinematic sci-fi, federation starship style, futuristic, highly detailed">Star Trek</option>
+                        <option value="Star Wars universe aesthetic, cinematic fantasy sci-fi, detailed textures, epic scale">Star Wars</option>
+                        <option value="Cyberpunk aesthetic, neon lights, highly detailed, futuristic synthwave">Cyberpunk / Futurista</option>
+                        <option value="Steampunk aesthetic, brass and gears, victorian era sci-fi, highly detailed">Steampunk</option>
+                        <option value="Epic biblical aesthetic, ancient historical, dramatic lighting, monumental scale, classical painting style">Épico / Histórico (Bíblico)</option>
+                        <option value="Professional portrait photography, 85mm lens, sharp focus on face, highly detailed people">Retrato Profissional (Pessoas)</option>
+                        <option value="Macro food photography, appetizing fruits, highly detailed, vibrant colors, studio lighting">Macro / Frutas e Comida</option>
+                        <option value="3D Render, Unreal Engine 5, Pixar style, highly detailed, cute and smooth">Renderização 3D / Pixar</option>
+                        <option value="Anime style, Studio Ghibli, beautiful vibrant colors, 2D animation">Anime / Ghibli</option>
+                        <option value="Watercolor painting, expressive brush strokes, artistic masterpiece">Pintura Aquarela</option>
+                        <option value="Let the AI decide the best style based on the idea">Me surpreenda (Auto)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="lightingSelect" style="display: block; margin-bottom: 5px; font-size: 0.9em; font-weight: 600;"><i class="fas fa-sun"></i> Iluminação / Clima</label>
+                    <select id="lightingSelect" class="styled-select">
+                        <option value="Volumetric lighting, dramatic shadows, ray tracing">Luz Dramática / Volumétrica</option>
+                        <option value="Golden hour, warm sunlight, beautiful natural lighting">Golden Hour (Pôr do Sol)</option>
+                        <option value="Studio lighting, softbox, professional setup">Luz de Estúdio (Profissional)</option>
+                        <option value="Neon lights, glowing vibrant colors, dark background">Luz Néon (Escuro)</option>
+                        <option value="Ethereal glowing light, bioluminescence, magical atmosphere">Luz Mágica / Etérea</option>
+                        <option value="Let the AI decide the best lighting based on the idea">Me surpreenda (Auto)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="formatSelect" style="display: block; margin-bottom: 5px; font-size: 0.9em; font-weight: 600;"><i class="fas fa-robot"></i> Motor Alvo</label>
+                    <select id="formatSelect" class="styled-select">
+                        <option value="Midjourney (comma separated keywords, append appropriate aspect ratio like --ar 16:9 or --ar 1:1, use parameters like --v 6.0)">Midjourney (Palavras-chave + Parâmetros)</option>
+                        <option value="DALL-E 3 (natural language descriptive paragraph, flowing sentences, highly descriptive)">DALL-E 3 (Texto Descritivo Natural)</option>
+                        <option value="Flux.1 (Highly detailed natural language, emphasizing composition, typography, and realistic textures)">Flux.1 (Linguagem Natural Detalhada)</option>
+                        <option value="Stable Diffusion (comma separated keywords, explicit subject, detailed environment, technical terms)">Stable Diffusion (Palavras-chave Técnicas)</option>
+                        <option value="Leonardo AI (Blend of natural language and keywords, highly cinematic, negative prompts implicitly avoided)">Leonardo AI (Misto de Texto e Palavras-chave)</option>
+                        <option value="Adobe Firefly (Clean natural language, focus on photography terms, lighting, and explicit safe content)">Adobe Firefly (Foco Fotográfico/Comercial)</option>
+                        <option value="Runway Gen-3 / Sora (Dynamic natural language, focus on camera movement, temporal changes, physics, and continuous action)">Runway Gen-3 / Sora (Foco em Movimento/Vídeo)</option>
+                        <option value="Google Veo 3 / VO3.1 (Highly cinematic, continuous temporal motion, physics-based descriptions, realistic camera dynamics, photorealism)">Google Veo 3 / VO3.1 (Cinematográfico Realista)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="variationsSelect" style="display: block; margin-bottom: 5px; font-size: 0.9em; font-weight: 600;"><i class="fas fa-clone"></i> Quantidade</label>
+                    <select id="variationsSelect" class="styled-select">
+                        <option value="1">1 Opção por ideia</option>
+                        <option value="2">2 Opções por ideia</option>
+                        <option value="3" selected>3 Opções por ideia</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="main-actions">
+                <button id="clearBtn" class="clear-btn" title="Limpar ideia"><i class="fas fa-eraser"></i></button>
+                <button id="generateBtn" class="generate-btn"><i class="fas fa-rocket"></i> Sintetizar Prompts</button>
+            </div>
+            
+            <div id="message"></div>
+
+            <div id="loaderWrapper" class="loader-wrapper">
+                <span class="loader"></span>
+                <span class="loading-text" id="dynamicLoadingText">O núcleo linguístico está decifrando a sua ideia...</span>
+                <div id="progressBarContainer" class="progress-bar-container">
+                    <div id="progressBar" class="progress-bar"></div>
+                </div>
+            </div>
+
+            <div id="resultsContainer">
+                <div class="variant-header" style="border: none; margin-bottom: 1rem;">
+                    <h3 style="color: var(--color-primary);"><i class="fas fa-check-circle"></i> Coordenadas Expandidas</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="downloadTxtBtn" class="copy-btn" title="Salvar em um arquivo de texto"><i class="fas fa-file-alt"></i> Exportar TXT</button>
+                    </div>
+                </div>
+                <div id="variantsList">
+                    <!-- Os cards dos prompts entrarão aqui via JS -->
+                </div>
+            </div>
+        </div>
+
+        <div class="app-card history-card" id="historyCard">
+            <div class="tabs-header">
+                <button class="tab-btn active" data-tab="historyTab"><i class="fas fa-history"></i> Registros</button>
+                <button class="tab-btn" data-tab="favoritesTab"><i class="fas fa-star" style="color: var(--color-star);"></i> Cofre</button>
+            </div>
+            
+            <!-- TAB HISTÓRICO -->
+            <div id="historyTab" class="tab-content active">
+                <div class="history-header">
+                    <h3>Registros Recentes <span id="historyBadge" class="history-badge">0</span></h3>
+                    <div class="history-actions">
+                        <button id="deleteAllHistoryBtn" class="btn-danger" title="Apagar todos os registros"><i class="fas fa-trash-alt"></i> Limpar Registros</button>
+                    </div>
+                </div>
+                <div id="historyList" class="history-list"></div>
+            </div>
+
+            <!-- TAB COFRE (FAVORITOS) -->
+            <div id="favoritesTab" class="tab-content">
+                <div class="history-header">
+                    <h3>Cofre de Relíquias (Favoritos) <span id="favBadge" class="history-badge">0</span></h3>
+                    <div style="font-size: 0.85em; color: var(--color-action);">Prompts que você salvou com a estrela.</div>
+                </div>
+                <div id="favoritesList" class="history-list"></div>
+                <div id="noFavsMessage" style="text-align: center; color: var(--color-action); padding: 20px; display: none;">
+                    <i class="fas fa-star-half-alt" style="font-size: 2em; margin-bottom: 10px;"></i><br>O cofre está vazio, Comandante.
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL DE CONFIRMAÇÃO -->
+    <div id="confirmModal" class="confirm-modal">
+        <div class="confirm-content">
+            <h3><i class="fas fa-exclamation-triangle"></i> Atenção, Comandante!</h3>
+            <p>Tem certeza que deseja apagar permanentemente todos os registros do Histórico? Esta ação não pode ser desfeita.</p>
+            <div class="confirm-actions">
+                <button id="confirmYes" class="btn-yes">Sim, Limpar Tudo</button>
+                <button id="confirmNo" class="btn-no">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <a id="back-to-top-btn" class="floating-button back-to-top" title="Voltar ao topo">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
+    </a>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- INICIALIZAÇÃO FIREBASE ---
+        let app, auth, db, currentUser = null;
+        let unsubscribeHistory = null, unsubscribeFavs = null;
+        let useCloudStorage = false;
+        
+        const localHistoryKey = 'cronicas_prompts_history';
+        const localFavsKey = 'cronicas_prompts_favorites';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        
+        let promptHistory = [];
+        let promptFavorites = [];
+        let currentSessionResults = []; // New array for session persistence
+        
+        try {
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        } catch (e) {
+            console.error("Erro ao inicializar Firebase", e);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const ideaInput = document.getElementById('ideaInput');
+            const characterSeedInput = document.getElementById('characterSeedInput');
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            const toggleApiKeyBtn = document.getElementById('toggleApiKeyBtn');
+            const translateBtn = document.getElementById('translateBtn');
+            const undoBtn = document.getElementById('undoBtn');
+            const redoBtn = document.getElementById('redoBtn');
+            const styleSelect = document.getElementById('styleSelect');
+            const lightingSelect = document.getElementById('lightingSelect');
+            const formatSelect = document.getElementById('formatSelect');
+            const variationsSelect = document.getElementById('variationsSelect');
+            const generateBtn = document.getElementById('generateBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            
+            // Vision Dropzone Elements
+            const visionDropZone = document.getElementById('visionDropZone');
+            const visionInput = document.getElementById('visionInput');
+            const visionPreviewWrapper = document.getElementById('visionPreviewWrapper');
+            const visionPreviewImg = document.getElementById('visionPreviewImg');
+            const visionRemoveBtn = document.getElementById('visionRemoveBtn');
+            let visionBase64 = null;
+            let visionMimeType = null;
+
+            const loaderWrapper = document.getElementById('loaderWrapper');
+            const dynamicLoadingText = document.getElementById('dynamicLoadingText');
+            const progressBarContainer = document.getElementById('progressBarContainer');
+            const progressBar = document.getElementById('progressBar');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const variantsList = document.getElementById('variantsList');
+            const messageDiv = document.getElementById('message');
+            const downloadTxtBtn = document.getElementById('downloadTxtBtn');
+            
+            const historyCard = document.getElementById('historyCard');
+            const historyList = document.getElementById('historyList');
+            const historyBadge = document.getElementById('historyBadge');
+            const deleteAllHistoryBtn = document.getElementById('deleteAllHistoryBtn');
+            
+            const favoritesList = document.getElementById('favoritesList');
+            const favBadge = document.getElementById('favBadge');
+            const noFavsMessage = document.getElementById('noFavsMessage');
+
+            // Elements do Modal de Confirmação
+            const confirmModal = document.getElementById('confirmModal');
+            const confirmYes = document.getElementById('confirmYes');
+            const confirmNo = document.getElementById('confirmNo');
+
+            const backToTopButton = document.getElementById("back-to-top-btn");
+
+            // --- MOTOR UNIFICADO DE COMUNICAÇÃO (LIMPO E DIRETO) ---
+            async function fetchWithRetry(payload, retries = 3) {
+                const delays = [2000, 4000, 8000]; 
+                let userKey = apiKeyInput.value.trim().replace(/['"]/g, '');
+                const isCanvas = window.location.hostname.includes('usercontent.goog') || window.location.href.includes('blob:');
+                
+                let url = "";
+                if (userKey) {
+                    // Ambiente Externo: Apontado EXCLUSIVAMENTE ao modelo 2.5-flash conforme a sua ordem
+                    url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${userKey}`;
+                } else {
+                    if (isCanvas) {
+                        // Simulador Interno da Nave
+                        url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=`;
+                    } else {
+                        throw new Error("Comandante, insira a sua Chave API do Google para utilizar fora do simulador.");
+                    }
+                }
+
+                for (let i = 0; i <= retries; i++) {
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                            let apiError = response.statusText;
+                            try {
+                                const errData = await response.json();
+                                if (errData.error && errData.error.message) {
+                                    apiError = errData.error.message;
+                                }
+                            } catch(e) {}
+
+                            // Se for erro de formatação ou chave (400, 403, 404), aborta sem tentar de novo
+                            if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+                                throw new Error(`FALHA_FATAL: Erro na Chave ou Pedido (${response.status}) - ${apiError}`);
+                            }
+                            
+                            // Se for pico de tráfego (429) ou erro de servidor (500), força a repetição
+                            throw new Error(`Erro do Servidor (${response.status}): ${apiError}`);
+                        }
+                        
+                        const result = await response.json();
+                        
+                        if (result.promptFeedback?.blockReason || result.candidates?.[0]?.finishReason === 'SAFETY') {
+                            throw new Error("FALHA_FATAL: A ideia gerou um alerta de segurança e foi bloqueada pelos filtros da IA.");
+                        }
+                        
+                        return result;
+
+                    } catch (error) {
+                        // Se o erro for fatal, limpa a tag e exibe imediatamente ao Comandante
+                        if (error.message.includes("FALHA_FATAL") || i === retries) {
+                            throw new Error(error.message.replace("FALHA_FATAL: ", ""));
+                        }
+                        // Aguarda os segundos programados antes da próxima tentativa
+                        await new Promise(r => setTimeout(r, delays[i] || 3000));
+                    }
+                }
+            }
+
+            // --- CONSTANTES DE ARMAZENAMENTO LOCAL ---
+            const LKEY_IDEA = 'cronicas_expansor_idea';
+            const LKEY_SEED = 'cronicas_expansor_seed';
+            const LKEY_API_KEY = 'cronicas_expansor_api_key';
+            const LKEY_STYLE = 'cronicas_expansor_style';
+            const LKEY_LIGHTING = 'cronicas_expansor_lighting';
+            const LKEY_FORMAT = 'cronicas_expansor_format';
+            const LKEY_VARS = 'cronicas_expansor_vars';
+            const LKEY_VISION_B64 = 'cronicas_expansor_vision_b64';
+            const LKEY_VISION_MIME = 'cronicas_expansor_vision_mime';
+            const LKEY_LATEST_RESULTS = 'cronicas_expansor_latest_results';
+
+            function saveCurrentSession() {
+                try {
+                    localStorage.setItem(LKEY_LATEST_RESULTS, JSON.stringify(currentSessionResults));
+                } catch(e) {
+                    console.warn("Falha ao salvar os resultados na cache.");
+                }
+            }
+
+            function restoreSessionState() {
+                try {
+                    if (localStorage.getItem(LKEY_IDEA)) ideaInput.value = localStorage.getItem(LKEY_IDEA);
+                    if (localStorage.getItem(LKEY_SEED)) characterSeedInput.value = localStorage.getItem(LKEY_SEED);
+                    if (localStorage.getItem(LKEY_API_KEY)) apiKeyInput.value = localStorage.getItem(LKEY_API_KEY);
+                    if (localStorage.getItem(LKEY_STYLE)) styleSelect.value = localStorage.getItem(LKEY_STYLE);
+                    if (localStorage.getItem(LKEY_LIGHTING)) lightingSelect.value = localStorage.getItem(LKEY_LIGHTING);
+                    if (localStorage.getItem(LKEY_FORMAT)) formatSelect.value = localStorage.getItem(LKEY_FORMAT);
+                    if (localStorage.getItem(LKEY_VARS)) variationsSelect.value = localStorage.getItem(LKEY_VARS);
+
+                    const savedImg = localStorage.getItem(LKEY_VISION_B64);
+                    const savedMime = localStorage.getItem(LKEY_VISION_MIME);
+                    if (savedImg && savedMime) {
+                        visionBase64 = savedImg;
+                        visionMimeType = savedMime;
+                        visionPreviewImg.src = visionBase64;
+                        visionPreviewWrapper.style.display = 'block';
+                        visionDropZone.style.display = 'none';
+                    }
+
+                    const savedResults = localStorage.getItem(LKEY_LATEST_RESULTS);
+                    if (savedResults) {
+                        currentSessionResults = JSON.parse(savedResults);
+                        if (currentSessionResults && currentSessionResults.length > 0) {
+                            variantsList.innerHTML = '';
+                            currentSessionResults.forEach((ideaData, iIdx) => {
+                                const ideaSection = document.createElement('div');
+                                ideaSection.className = 'idea-result-section';
+                                ideaSection.innerHTML = `<div class="idea-section-header"><i class="fas fa-lightbulb" style="color: var(--color-warning);"></i> <strong>Ideia ${iIdx + 1}:</strong> <span class="idea-text" title="${ideaData.idea}">${ideaData.idea}</span></div>`;
+                                
+                                ideaData.variants.forEach((vData, vIdx) => {
+                                    const card = createVariantCard(vData.text, vIdx + 1, ideaData.idea, vData);
+                                    ideaSection.appendChild(card);
+                                });
+                                variantsList.appendChild(ideaSection);
+                            });
+                            resultsContainer.style.display = 'block';
+                        }
+                    }
+                } catch (e) { console.error("Erro ao restaurar estado", e); }
+            }
+
+            ideaInput.addEventListener('input', () => localStorage.setItem(LKEY_IDEA, ideaInput.value));
+            characterSeedInput.addEventListener('input', () => localStorage.setItem(LKEY_SEED, characterSeedInput.value));
+            apiKeyInput.addEventListener('input', () => localStorage.setItem(LKEY_API_KEY, apiKeyInput.value));
+            styleSelect.addEventListener('change', () => localStorage.setItem(LKEY_STYLE, styleSelect.value));
+            lightingSelect.addEventListener('change', () => localStorage.setItem(LKEY_LIGHTING, lightingSelect.value));
+            formatSelect.addEventListener('change', () => localStorage.setItem(LKEY_FORMAT, formatSelect.value));
+            variationsSelect.addEventListener('change', () => localStorage.setItem(LKEY_VARS, variationsSelect.value));
+
+            toggleApiKeyBtn.addEventListener('click', () => {
+                if (apiKeyInput.type === 'password') {
+                    apiKeyInput.type = 'text';
+                    toggleApiKeyBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                } else {
+                    apiKeyInput.type = 'password';
+                    toggleApiKeyBtn.innerHTML = '<i class="fas fa-eye"></i>';
+                }
+            });
+
+            const applyInitialTheme = () => {
+                const storedTheme = localStorage.getItem('theme');
+                if (storedTheme) {
+                    document.body.classList.toggle('light-theme', storedTheme === 'light');
+                } else {
+                    const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+                    document.body.classList.toggle('light-theme', prefersLight);
+                }
+            };
+            applyInitialTheme();
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    btn.classList.add('active');
+                    document.getElementById(btn.dataset.tab).classList.add('active');
+                });
+            });
+
+            function handleVisionFile(file) {
+                if (!file || !file.type.startsWith('image/')) {
+                    showMessage('Formato inválido. Use JPG ou PNG.', 'error');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    visionBase64 = e.target.result;
+                    visionMimeType = file.type;
+                    visionPreviewImg.src = visionBase64;
+                    visionPreviewWrapper.style.display = 'block';
+                    visionDropZone.style.display = 'none';
+                    
+                    try {
+                        localStorage.setItem(LKEY_VISION_B64, visionBase64);
+                        localStorage.setItem(LKEY_VISION_MIME, visionMimeType);
+                    } catch(err) {
+                        console.warn("Imagem muito grande para guardar na cache local.");
+                    }
+                    
+                    showMessage('Imagem acoplada aos sensores de visão!', 'success');
+                };
+                reader.readAsDataURL(file);
+            }
+
+            visionDropZone.addEventListener('click', () => visionInput.click());
+            visionInput.addEventListener('change', (e) => { if (e.target.files[0]) handleVisionFile(e.target.files[0]); });
+            visionDropZone.addEventListener('dragover', (e) => { e.preventDefault(); visionDropZone.classList.add('dragover'); });
+            visionDropZone.addEventListener('dragleave', () => visionDropZone.classList.remove('dragover'));
+            visionDropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                visionDropZone.classList.remove('dragover');
+                if (e.dataTransfer.files[0]) handleVisionFile(e.dataTransfer.files[0]);
+            });
+            visionRemoveBtn.addEventListener('click', () => {
+                visionBase64 = null; visionMimeType = null;
+                visionPreviewImg.src = '';
+                visionPreviewWrapper.style.display = 'none';
+                visionDropZone.style.display = 'flex';
+                visionInput.value = '';
+                localStorage.removeItem(LKEY_VISION_B64);
+                localStorage.removeItem(LKEY_VISION_MIME);
+            });
+
+            try {
+                const storedHist = localStorage.getItem(localHistoryKey);
+                if (storedHist) { promptHistory = JSON.parse(storedHist); updateHistoryView(); }
+                const storedFavs = localStorage.getItem(localFavsKey);
+                if (storedFavs) { promptFavorites = JSON.parse(storedFavs); updateFavoritesView(); }
+            } catch (e) { console.error('Erro no cache local', e); }
+
+            if (auth) {
+                const initAuth = async () => {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch(e) { console.error("Auth error", e); }
+                };
+
+                initAuth();
+
+                onAuthStateChanged(auth, (user) => {
+                    currentUser = user;
+                    if (user) {
+                        useCloudStorage = true;
+                        loadCloudData();
+                    } else {
+                        useCloudStorage = false;
+                        updateHistoryView();
+                        updateFavoritesView();
+                    }
+                });
+            }
+
+            function loadCloudData() {
+                if (!currentUser || !db) return;
+                
+                if (unsubscribeHistory) unsubscribeHistory();
+                const historyRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'prompts');
+                unsubscribeHistory = onSnapshot(historyRef, (snapshot) => {
+                    promptHistory = [];
+                    snapshot.forEach(docSnap => {
+                        const data = docSnap.data(); data.id = docSnap.id; promptHistory.push(data);
+                    });
+                    promptHistory.sort((a, b) => b.timestamp - a.timestamp);
+                    updateHistoryView();
+                    try { localStorage.setItem(localHistoryKey, JSON.stringify(promptHistory.slice(0, 20))); } catch (e) {}
+                });
+
+                if (unsubscribeFavs) unsubscribeFavs();
+                const favsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'favorites_prompts');
+                unsubscribeFavs = onSnapshot(favsRef, (snapshot) => {
+                    promptFavorites = [];
+                    snapshot.forEach(docSnap => {
+                        const data = docSnap.data(); data.id = docSnap.id; promptFavorites.push(data);
+                    });
+                    promptFavorites.sort((a, b) => b.timestamp - a.timestamp);
+                    updateFavoritesView();
+                    try { localStorage.setItem(localFavsKey, JSON.stringify(promptFavorites)); } catch (e) {}
+                });
+            }
+
+            function showMessage(msg, type = 'success') {
+                messageDiv.textContent = msg;
+                messageDiv.className = type;
+                setTimeout(() => { messageDiv.textContent = ''; messageDiv.className = ''; }, 5000);
+            }
+
+            function copyToClipboard(text, btnElement) {
+                const originalHtml = btnElement.innerHTML;
+                const isIconOnly = btnElement.classList.contains('icon-square-btn') || btnElement.classList.contains('copy-hist-btn') || btnElement.classList.contains('delete-hist-btn');
+                const successHtml = isIconOnly ? '<i class="fas fa-check"></i>' : '<i class="fas fa-check"></i> Copiado!';
+
+                navigator.clipboard.writeText(text).then(() => {
+                    btnElement.innerHTML = successHtml;
+                    btnElement.classList.add('copied');
+                    setTimeout(() => { btnElement.innerHTML = originalHtml; btnElement.classList.remove('copied'); }, 2000);
+                }).catch(err => {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    btnElement.innerHTML = successHtml;
+                    btnElement.classList.add('copied');
+                    setTimeout(() => { btnElement.innerHTML = originalHtml; btnElement.classList.remove('copied'); }, 2000);
+                });
+            }
+
+            // --- LÓGICA DE TRADUÇÃO INTELIGENTE ---
+            async function translateTextWithGemini(text) {
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: `Text to translate:\n\n${text}` }] }],
+                    systemInstruction: { parts: [{ text: "You are a professional translator. Auto-detect language (EN/PT) and translate to the other. Preserve line breaks. Output ONLY the translated text, without quotes, introductions, explanations, or language labels. Do not use markdown formatting like ```." }] }
+                };
+
+                const result = await fetchWithRetry(payload);
+                let translated = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!translated) throw new Error("A API retornou uma mensagem vazia.");
+                return translated.replace(/^```[a-zA-Z]*\n/i, '').replace(/\n```$/i, '').replace(/^```/i, '').replace(/```$/i, '').trim();
+            }
+
+            translateBtn.addEventListener('click', async () => {
+                const text = ideaInput.value.trim();
+                if (!text) return showMessage('Comandante, digite uma ideia para traduzir!', 'error');
+
+                const originalHtml = translateBtn.innerHTML;
+                translateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                translateBtn.disabled = true;
+
+                try {
+                    const translatedText = await translateTextWithGemini(text);
+                    ideaInput.focus();
+                    ideaInput.select();
+                    const success = document.execCommand('insertText', false, translatedText);
+                    if (!success) {
+                        ideaInput.value = translatedText;
+                    }
+                    showMessage('Tradução concluída com sucesso!', 'success');
+                } catch (error) {
+                    showMessage('Sinal de tradução perdido: ' + error.message, 'error');
+                } finally {
+                    translateBtn.innerHTML = originalHtml;
+                    translateBtn.disabled = false;
+                }
+            });
+
+            undoBtn.addEventListener('mousedown', (e) => {
+                e.preventDefault(); 
+                ideaInput.focus();
+                document.execCommand('undo');
+            });
+
+            redoBtn.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                ideaInput.focus();
+                document.execCommand('redo');
+            });
+
+            // --- LÓGICA DO PROMPT DE VÍDEO ---
+            async function generateVideoPromptWithGemini(imagePrompt, actionInstruction = "") {
+                const systemPrompt = `You are a Master AI Video Prompt Engineer. 
+Your task is to take an image generation prompt and convert it into a highly professional prompt for AI video generators.
+Constraints:
+- Add specific cinematic camera movements (e.g., slow pan, drone shot).
+- Describe subject motion and atmospheric dynamics over time.
+- The output MUST be in ENGLISH.
+- Output ONLY the prompt text. Do not use markdown like \`\`\`.`;
+
+                let actionAddon = "";
+                if (actionInstruction.trim() !== "") {
+                    actionAddon = `\n\nCRITICAL INSTRUCTION FOR MOTION: The user specifically requested the following action/movement: "${actionInstruction}". Make this the central focus.`;
+                }
+
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: `Convert this static image prompt to a dynamic video prompt:${actionAddon}\n\nOriginal Image Prompt:\n"${imagePrompt}"` }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: { temperature: 0.7 }
+                };
+
+                const result = await fetchWithRetry(payload);
+                let generatedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!generatedText) throw new Error("A API retornou uma mensagem vazia.");
+                return generatedText.replace(/```[\s\S]*?\n/g, '').replace(/```/g, '').trim();
+            }
+
+            // --- LÓGICA PRINCIPAL DA IA ---
+            async function generatePromptsWithGemini(idea, style, lighting, targetFormat, numVariations, charSeed, imgB64, imgMime) {
+                let systemPrompt = `You are a Master AI Image Prompt Engineer. 
+Expand the simple idea into highly descriptive, professional-grade image generation prompts. The output MUST be in ENGLISH.
+Constraints:
+- Generate EXACTLY ${numVariations} variation(s).
+- Incorporate style: ${style}
+- Incorporate lighting: ${lighting}
+- Format specifically for: ${targetFormat}.
+- Output ONLY the prompt variations. Separate each strictly with "|||VARIANT_SEPARATOR|||".`;
+
+                if (charSeed && charSeed.trim() !== "") {
+                    systemPrompt += `\n- CRITICAL: The user specified a character seed: "${charSeed}". You MUST prominently include this exact character description in EVERY variant.`;
+                }
+
+                let partsArray = [{ text: `User's idea: "${idea}"` }];
+                if (imgB64 && imgMime) {
+                    systemPrompt += `\n- The user provided an image. Analyze its style, composition, and subjects, and integrate those elements deeply into the generated prompts.`;
+                    partsArray.push({
+                        inlineData: {
+                            mimeType: imgMime,
+                            data: imgB64.split(',')[1]
+                        }
+                    });
+                }
+
+                const payload = {
+                    contents: [{ role: "user", parts: partsArray }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: { temperature: 0.7 }
+                };
+
+                const result = await fetchWithRetry(payload);
+                let generatedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!generatedText) throw new Error("A API retornou uma mensagem vazia.");
+                
+                generatedText = generatedText.replace(/```[\s\S]*?\n/g, '').replace(/```/g, '').trim();
+                return generatedText.split('|||VARIANT_SEPARATOR|||').map(v => v.trim()).filter(v => v.length > 0);
+            }
+
+            // --- CRIAR CARD DA VARIANTE COM CHIPS ---
+            function createVariantCard(text, index, idea, stateObj = null) {
+                const card = document.createElement('div');
+                card.className = 'prompt-variant-card';
+                
+                const header = document.createElement('div');
+                header.className = 'variant-header';
+                
+                const title = document.createElement('div');
+                title.className = 'variant-title';
+                title.innerHTML = `<i class="fas fa-wand-magic-sparkles"></i> Variante ${index}`;
+                
+                const actionsDiv = document.createElement('div');
+                actionsDiv.style.display = 'flex';
+                actionsDiv.style.gap = '8px';
+
+                const content = document.createElement('div');
+                content.className = 'variant-text';
+                content.textContent = text;
+
+                // Modifiers
+                const modifiersDiv = document.createElement('div');
+                modifiersDiv.className = 'modifiers-container';
+                const modifiers = ['--ar 16:9', '--ar 9:16', '--v 6.0', '8k resolution', 'hyper-detailed', 'Unreal Engine 5'];
+                modifiers.forEach(mod => {
+                    const chip = document.createElement('button');
+                    chip.className = 'mod-chip';
+                    chip.textContent = `+ ${mod}`;
+                    chip.title = `Adicionar ${mod}`;
+                    chip.onclick = () => {
+                        content.textContent = content.textContent.trim() + (content.textContent.endsWith(',') ? ` ${mod}` : `, ${mod}`);
+                    };
+                    modifiersDiv.appendChild(chip);
+                });
+
+                // Favoritar Botão
+                const btnFav = document.createElement('button');
+                btnFav.className = 'fav-var-btn';
+                btnFav.title = 'Salvar no Cofre (Favoritos)';
+                
+                // Verificar se já é favorito
+                const isAlreadyFav = promptFavorites.some(f => f.prompt === text);
+                if (isAlreadyFav) {
+                    btnFav.classList.add('is-fav');
+                    btnFav.innerHTML = '<i class="fas fa-star"></i>';
+                } else {
+                    btnFav.innerHTML = '<i class="far fa-star"></i>';
+                }
+
+                btnFav.onclick = async () => {
+                    if (btnFav.classList.contains('is-fav')) {
+                        // Remover dos favoritos
+                        btnFav.classList.remove('is-fav');
+                        btnFav.innerHTML = '<i class="far fa-star"></i>';
+                        const favItem = promptFavorites.find(f => f.prompt === content.textContent);
+                        if (favItem) removeFavorite(favItem.id);
+                    } else {
+                        // Adicionar aos favoritos
+                        btnFav.classList.add('is-fav');
+                        btnFav.innerHTML = '<i class="fas fa-star"></i>';
+                        await saveToFavorites(idea, content.textContent);
+                    }
+                };
+
+                const btnTranslate = document.createElement('button');
+                btnTranslate.className = 'translate-var-btn icon-square-btn';
+                btnTranslate.title = 'Traduzir Prompt';
+                btnTranslate.innerHTML = '<i class="fas fa-language"></i>';
+                btnTranslate.onclick = async () => {
+                    const originalHtml = btnTranslate.innerHTML;
+                    btnTranslate.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    btnTranslate.disabled = true;
+                    try {
+                        const translatedText = await translateTextWithGemini(content.textContent);
+                        content.textContent = translatedText;
+                    } catch (err) {
+                        showMessage("Sinal de tradução perdido: " + err.message, "error");
+                    } finally {
+                        btnTranslate.innerHTML = originalHtml;
+                        btnTranslate.disabled = false;
+                    }
+                };
+                
+                const btnCopy = document.createElement('button');
+                btnCopy.className = 'copy-btn icon-square-btn';
+                btnCopy.title = 'Copiar Prompt';
+                btnCopy.innerHTML = '<i class="fas fa-copy"></i>';
+                btnCopy.onclick = () => copyToClipboard(content.textContent, btnCopy);
+
+                const videoActionInput = document.createElement('input');
+                videoActionInput.type = 'text';
+                videoActionInput.className = 'video-action-input';
+                videoActionInput.placeholder = 'Instrução de movimento (Opcional). Ex: A câmara aproxima-se rapidamente...';
+                if (stateObj && stateObj.videoAction) {
+                    videoActionInput.value = stateObj.videoAction;
+                }
+                videoActionInput.addEventListener('input', () => {
+                    if (stateObj) {
+                        stateObj.videoAction = videoActionInput.value;
+                        saveCurrentSession();
+                    }
+                });
+
+                const btnVideo = document.createElement('button');
+                btnVideo.className = 'video-var-btn icon-square-btn';
+                btnVideo.title = 'Gerar Script de Vídeo';
+                btnVideo.innerHTML = '<i class="fas fa-video"></i>';
+                
+                const videoBox = document.createElement('div');
+                videoBox.className = 'video-prompt-box';
+                
+                const videoTitle = document.createElement('div');
+                videoTitle.style.fontWeight = '700';
+                videoTitle.style.color = 'var(--color-danger)';
+                videoTitle.style.marginBottom = '8px';
+                videoTitle.innerHTML = '<i class="fas fa-film"></i> Script de Vídeo Gerado';
+                
+                const videoContent = document.createElement('div');
+                videoContent.className = 'variant-text';
+                videoContent.style.borderColor = 'var(--color-danger)';
+                if (stateObj && stateObj.videoPrompt) {
+                    videoContent.textContent = stateObj.videoPrompt;
+                    videoBox.style.display = 'block';
+                }
+                
+                const videoActionsDiv = document.createElement('div');
+                videoActionsDiv.className = 'video-actions';
+                
+                const btnTranslateVideo = document.createElement('button');
+                btnTranslateVideo.className = 'translate-var-btn icon-square-btn';
+                btnTranslateVideo.title = 'Traduzir Script';
+                btnTranslateVideo.innerHTML = '<i class="fas fa-language"></i>';
+                btnTranslateVideo.onclick = async () => {
+                    const originalHtml = btnTranslateVideo.innerHTML;
+                    btnTranslateVideo.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    btnTranslateVideo.disabled = true;
+                    try {
+                        const translatedText = await translateTextWithGemini(videoContent.textContent);
+                        videoContent.textContent = translatedText;
+                    } catch (err) {
+                        showMessage("Sinal de tradução perdido: " + err.message, "error");
+                    } finally {
+                        btnTranslateVideo.innerHTML = originalHtml;
+                        btnTranslateVideo.disabled = false;
+                    }
+                };
+
+                const btnCopyVideo = document.createElement('button');
+                btnCopyVideo.className = 'copy-btn icon-square-btn';
+                btnCopyVideo.title = 'Copiar Script';
+                btnCopyVideo.innerHTML = '<i class="fas fa-copy"></i>';
+                btnCopyVideo.onclick = () => copyToClipboard(videoContent.textContent, btnCopyVideo);
+                
+                videoActionsDiv.appendChild(btnTranslateVideo);
+                videoActionsDiv.appendChild(btnCopyVideo);
+
+                videoBox.appendChild(videoTitle);
+                videoBox.appendChild(videoContent);
+                videoBox.appendChild(videoActionsDiv);
+
+                btnVideo.onclick = async () => {
+                    const originalHtml = btnVideo.innerHTML;
+                    btnVideo.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    btnVideo.disabled = true;
+                    videoActionInput.disabled = true;
+                    try {
+                        const videoPrompt = await generateVideoPromptWithGemini(content.textContent, videoActionInput.value);
+                        videoContent.textContent = videoPrompt;
+                        videoBox.style.display = 'block';
+                        
+                        if (stateObj) {
+                            stateObj.videoPrompt = videoPrompt;
+                            saveCurrentSession();
+                        }
+                    } catch (err) {
+                        showMessage(err.message || "Erro na conversão.", "error");
+                    } finally {
+                        btnVideo.innerHTML = originalHtml;
+                        btnVideo.disabled = false;
+                        videoActionInput.disabled = false;
+                    }
+                };
+
+                title.appendChild(btnFav); // Star next to title
+                actionsDiv.appendChild(btnTranslate);
+                actionsDiv.appendChild(btnVideo);
+                actionsDiv.appendChild(btnCopy);
+
+                header.appendChild(title);
+                header.appendChild(actionsDiv);
+
+                card.appendChild(header);
+                card.appendChild(content);
+                card.appendChild(modifiersDiv);
+                card.appendChild(videoActionInput);
+                card.appendChild(videoBox);
+
+                return card;
+            }
+
+            // --- AÇÃO DO BOTÃO GERAR ---
+            generateBtn.addEventListener('click', async () => {
+                const rawText = ideaInput.value.trim();
+                if (!rawText && !visionBase64) {
+                    showMessage("Comandante, indique uma ideia ou anexe uma imagem nos sensores!", "error");
+                    return;
+                }
+
+                let userKey = apiKeyInput.value.trim().replace(/['"]/g, '');
+                const isCanvas = window.location.hostname.includes('usercontent.goog') || window.location.href.includes('blob:');
+                
+                if (!isCanvas && !userKey) {
+                    showMessage("Fora da base estelar (ambiente de testes), precisa obrigatoriamente de inserir a sua Chave API do Google.", "error");
+                    return;
+                }
+
+                const ideasList = rawText ? rawText.split(/\n\s*\n/).map(i => i.trim()).filter(i => i.length > 0) : ["Análise Visual via Sensores"];
+
+                generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Em Hiperespaço...';
+                generateBtn.disabled = true;
+                clearBtn.disabled = true;
+                resultsContainer.style.display = 'none';
+                loaderWrapper.style.display = 'block';
+                progressBarContainer.style.display = 'block';
+                progressBar.style.width = '0%';
+                variantsList.innerHTML = '';
+                
+                currentSessionResults = []; // Resetar resultados da sessão anterior
+
+                try {
+                    const style = styleSelect.value;
+                    const lighting = lightingSelect.value;
+                    const format = formatSelect.value;
+                    const varsCount = parseInt(variationsSelect.value, 10);
+                    const charSeed = characterSeedInput.value.trim();
+
+                    let successCount = 0;
+
+                    for (let i = 0; i < ideasList.length; i++) {
+                        const currentIdea = ideasList[i];
+                        
+                        dynamicLoadingText.textContent = ideasList.length > 1 
+                            ? `Decifrando a ideia ${i + 1} de ${ideasList.length}...`
+                            : `O núcleo linguístico está processando os dados...`;
+
+                        try {
+                            const variants = await generatePromptsWithGemini(currentIdea, style, lighting, format, varsCount, charSeed, visionBase64, visionMimeType);
+                            if (variants.length === 0) throw new Error("Falha na formatação dos prompts.");
+
+                            const ideaData = {
+                                idea: currentIdea,
+                                variants: variants.map(v => ({ text: v, videoPrompt: null, videoAction: "" }))
+                            };
+                            currentSessionResults.push(ideaData);
+
+                            const ideaSection = document.createElement('div');
+                            ideaSection.className = 'idea-result-section';
+                            
+                            const ideaHeader = document.createElement('div');
+                            ideaHeader.className = 'idea-section-header';
+                            ideaHeader.innerHTML = `<i class="fas fa-lightbulb" style="color: var(--color-warning);"></i> <strong>Ideia ${i + 1}:</strong> <span class="idea-text" title="${currentIdea}">${currentIdea}</span>`;
+                            ideaSection.appendChild(ideaHeader);
+
+                            variants.forEach((text, index) => {
+                                const card = createVariantCard(text, index + 1, currentIdea, ideaData.variants[index]);
+                                ideaSection.appendChild(card);
+                            });
+
+                            variantsList.appendChild(ideaSection);
+                            
+                            saveToHistory(currentIdea, variants);
+                            successCount++;
+
+                        } catch (err) {
+                            console.error(`Erro ao gerar a ideia ${i + 1}:`, err);
+                            
+                            const errorCard = document.createElement('div');
+                            errorCard.className = 'prompt-variant-card';
+                            errorCard.style.borderLeftColor = 'var(--color-danger)';
+                            errorCard.innerHTML = `<div style="color: var(--color-danger); font-weight: bold;"><i class="fas fa-exclamation-triangle"></i> Falha na ideia ${i + 1}: ${err.message}</div>`;
+                            variantsList.appendChild(errorCard);
+                        }
+
+                        // Update Progress Bar
+                        progressBar.style.width = `${((i + 1) / ideasList.length) * 100}%`;
+
+                        if (i < ideasList.length - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 5000));
+                        }
+                    }
+
+                    resultsContainer.style.display = 'block';
+                    if (successCount === ideasList.length) {
+                        showMessage(`Missão cumprida! ${successCount} ideia(s) expandida(s).`, "success");
+                    } else if (successCount > 0) {
+                        showMessage(`Sucesso parcial. ${successCount} de ${ideasList.length} ideias.`, "warning");
+                    } else {
+                        showMessage("Falha estrutural ao tentar expandir as ideias.", "error");
+                    }
+                    
+                    saveCurrentSession(); // Guardar a nova sessão
+
+                } catch (error) {
+                    showMessage("Erro estrutural grave no sistema: " + error.message, "error");
+                } finally {
+                    generateBtn.innerHTML = '<i class="fas fa-rocket"></i> Sintetizar Prompts';
+                    generateBtn.disabled = false;
+                    clearBtn.disabled = false;
+                    setTimeout(() => { loaderWrapper.style.display = 'none'; progressBarContainer.style.display = 'none'; }, 1000);
+                }
+            });
+
+            // --- HISTÓRICO ---
+            async function saveToHistory(idea, generatedVariants) {
+                const record = { idea, variants: generatedVariants, timestamp: Date.now(), id: Date.now().toString() };
+                if (useCloudStorage && currentUser && db) {
+                    try {
+                        await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'prompts'), record);
+                        return; 
+                    } catch(e) {}
+                }
+                promptHistory.unshift(record);
+                if (promptHistory.length > 50) promptHistory.length = 50; 
+                localStorage.setItem(localHistoryKey, JSON.stringify(promptHistory));
+                updateHistoryView();
+            }
+
+            function updateHistoryView() {
+                historyList.innerHTML = '';
+                historyBadge.textContent = promptHistory.length;
+                if (promptHistory.length === 0) {
+                    historyCard.style.display = 'none';
+                    return;
+                }
+                historyCard.style.display = 'block';
+
+                promptHistory.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'history-item';
+                    const dateStr = new Date(item.timestamp).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    const firstPrompt = Array.isArray(item.variants) && item.variants.length > 0 ? item.variants[0] : "Sem dados";
+
+                    div.innerHTML = `
+                        <div class="history-item-top">
+                            <div style="flex: 1;">
+                                <div class="history-idea"><i class="fas fa-lightbulb" style="color: var(--color-warning);"></i> ${item.idea}</div>
+                                <div class="history-date">${dateStr}</div>
+                            </div>
+                            <div style="display: flex; gap: 5px;">
+                                <button class="copy-btn copy-hist-btn icon-square-btn" title="Copiar Prompt 1"><i class="fas fa-copy"></i></button>
+                                <button class="copy-btn delete-hist-btn icon-square-btn" style="background: transparent; border-color: var(--color-danger); color: var(--color-danger);" title="Apagar Registro"><i class="fas fa-trash-alt"></i></button>
+                            </div>
+                        </div>
+                        <div class="history-prompt">${firstPrompt}</div>
+                    `;
+
+                    div.querySelector('.copy-hist-btn').addEventListener('click', (e) => { e.stopPropagation(); copyToClipboard(firstPrompt, e.currentTarget); });
+                    div.querySelector('.delete-hist-btn').addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const btn = e.currentTarget; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
+                        try {
+                            if (useCloudStorage && currentUser && db && item.id) {
+                                await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'prompts', item.id));
+                            } else {
+                                promptHistory = promptHistory.filter(h => h.id !== item.id);
+                                localStorage.setItem(localHistoryKey, JSON.stringify(promptHistory));
+                                updateHistoryView();
+                            }
+                        } catch (err) { btn.innerHTML = '<i class="fas fa-trash-alt"></i>'; btn.disabled = false; }
+                    });
+
+                    div.style.cursor = 'pointer';
+                    div.addEventListener('click', () => {
+                        ideaInput.value = item.idea;
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        resultsContainer.style.display = 'block';
+                        variantsList.innerHTML = '';
+                        
+                        const ideaSection = document.createElement('div');
+                        ideaSection.className = 'idea-result-section';
+                        ideaSection.innerHTML = `<div class="idea-section-header"><i class="fas fa-lightbulb" style="color: var(--color-warning);"></i> <strong>Ideia (Recuperada):</strong> <span class="idea-text">${item.idea}</span></div>`;
+                        
+                        item.variants.forEach((text, index) => {
+                            // Não passamos stateObj aqui pois queremos que recupere como novo gerado (sem vídeo cacheado)
+                            const card = createVariantCard(text, index + 1 + " (Recuperada)", item.idea, null);
+                            ideaSection.appendChild(card);
+                        });
+                        variantsList.appendChild(ideaSection);
+                    });
+
+                    historyList.appendChild(div);
+                });
+            }
+
+            // --- FAVORITOS (COFRE) ---
+            async function saveToFavorites(idea, promptText) {
+                const record = { idea, prompt: promptText, timestamp: Date.now(), id: Date.now().toString() };
+                if (useCloudStorage && currentUser && db) {
+                    try {
+                        await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'favorites_prompts'), record);
+                        showMessage("Salvo no cofre!", "success");
+                        return; 
+                    } catch(e) {}
+                }
+                promptFavorites.unshift(record);
+                localStorage.setItem(localFavsKey, JSON.stringify(promptFavorites));
+                updateFavoritesView();
+                showMessage("Salvo no cofre!", "success");
+            }
+
+            async function removeFavorite(id) {
+                if (useCloudStorage && currentUser && db && id) {
+                    try {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'favorites_prompts', id));
+                        showMessage("Removido do cofre.", "success");
+                        return;
+                    } catch(e) {}
+                }
+                promptFavorites = promptFavorites.filter(f => f.id !== id);
+                localStorage.setItem(localFavsKey, JSON.stringify(promptFavorites));
+                updateFavoritesView();
+                showMessage("Removido do cofre.", "success");
+            }
+
+            function updateFavoritesView() {
+                favoritesList.innerHTML = '';
+                favBadge.textContent = promptFavorites.length;
+                if (promptFavorites.length === 0) {
+                    noFavsMessage.style.display = 'block';
+                    historyCard.style.display = promptHistory.length > 0 ? 'block' : 'none';
+                    return;
+                }
+                noFavsMessage.style.display = 'none';
+                historyCard.style.display = 'block';
+
+                promptFavorites.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'history-item';
+                    div.innerHTML = `
+                        <div class="history-item-top">
+                            <div style="flex: 1;">
+                                <div class="history-idea"><i class="fas fa-star" style="color: var(--color-star);"></i> ${item.idea}</div>
+                            </div>
+                            <div style="display: flex; gap: 5px;">
+                                <button class="copy-btn copy-hist-btn icon-square-btn" title="Copiar"><i class="fas fa-copy"></i></button>
+                                <button class="copy-btn delete-fav-btn icon-square-btn" style="background: transparent; border-color: var(--color-action); color: var(--color-action);" title="Remover dos Favoritos"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="history-prompt">${item.prompt}</div>
+                    `;
+
+                    div.querySelector('.copy-hist-btn').addEventListener('click', (e) => { e.stopPropagation(); copyToClipboard(item.prompt, e.currentTarget); });
+                    div.querySelector('.delete-fav-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        removeFavorite(item.id);
+                    });
+
+                    div.style.cursor = 'pointer';
+                    div.addEventListener('click', () => {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        resultsContainer.style.display = 'block';
+                        variantsList.innerHTML = '';
+                        const ideaSection = document.createElement('div');
+                        ideaSection.className = 'idea-result-section';
+                        ideaSection.innerHTML = `<div class="idea-section-header"><i class="fas fa-star" style="color: var(--color-star);"></i> <strong>Relíquia:</strong> <span class="idea-text">${item.idea}</span></div>`;
+                        // Não passamos stateObj para agir como cartão limpo
+                        const card = createVariantCard(item.prompt, "Relíquia", item.idea, null);
+                        ideaSection.appendChild(card);
+                        variantsList.appendChild(ideaSection);
+                    });
+
+                    favoritesList.appendChild(div);
+                });
+            }
+
+            // MODAL CONFIRMAÇÃO LÓGICA
+            deleteAllHistoryBtn.addEventListener('click', () => {
+                if (promptHistory.length === 0) return;
+                confirmModal.classList.add('show');
+            });
+
+            confirmNo.addEventListener('click', () => {
+                confirmModal.classList.remove('show');
+            });
+
+            confirmYes.addEventListener('click', async () => {
+                confirmModal.classList.remove('show');
+                const originalHtml = deleteAllHistoryBtn.innerHTML;
+                deleteAllHistoryBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Limpando...';
+                deleteAllHistoryBtn.disabled = true;
+
+                try {
+                    if (useCloudStorage && currentUser && db) {
+                        const deletePromises = promptHistory.map(item => {
+                            if (item.id) return deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'prompts', item.id));
+                        });
+                        await Promise.all(deletePromises);
+                    }
+                    localStorage.removeItem(localHistoryKey);
+                    promptHistory = [];
+                    updateHistoryView();
+                    showMessage("Registros apagados com sucesso.", "success");
+                } catch (error) {
+                    console.error("Erro ao limpar:", error);
+                    showMessage("Ocorreu um erro ao apagar os registros.", "error");
+                } finally {
+                    deleteAllHistoryBtn.innerHTML = originalHtml;
+                    deleteAllHistoryBtn.disabled = false;
+                }
+            });
+
+            // --- BOTÕES EXTRAS ---
+            clearBtn.addEventListener('click', () => { 
+                ideaInput.focus();
+                ideaInput.select();
+                const success = document.execCommand('delete');
+                if (!success || ideaInput.value !== '') {
+                    ideaInput.value = '';
+                }
+                characterSeedInput.value = ''; 
+                resultsContainer.style.display = 'none';
+                
+                // Limpar Sessão Salva
+                currentSessionResults = [];
+                localStorage.removeItem(LKEY_LATEST_RESULTS);
+            });
+
+            downloadTxtBtn.addEventListener('click', () => {
+                const ideaSections = document.querySelectorAll('.idea-result-section');
+                if (ideaSections.length === 0) return;
+                let txtContent = "=== PROMPTS GERADOS - CRÓNICAS ESTELARES ===\n";
+                ideaSections.forEach((sec, sIdx) => {
+                    const ideaText = sec.querySelector('span.idea-text').textContent;
+                    txtContent += `\n=========================================\n[ IDEIA ${sIdx + 1} ]: ${ideaText}\n=========================================\n\n`;
+                    sec.querySelectorAll('.variant-text').forEach((v, vIdx) => {
+                        // Não incluir o script de vídeo na contagem regular se for só da variante
+                        if (!v.parentElement.classList.contains('video-prompt-box')) {
+                            txtContent += `-> VARIANTE ${vIdx + 1}:\n${v.textContent}\n\n`;
+                        } else {
+                            txtContent += `-> SCRIPT DE VÍDEO:\n${v.textContent}\n\n`;
+                        }
+                    });
+                });
+                const blob = new Blob([txtContent], { type: "text/plain;charset=utf-8" });
+                const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
+                link.download = `Prompts_Estelares_${Date.now()}.txt`; link.click();
+            });
+            
+            window.addEventListener("scroll", () => {
+                if (backToTopButton) {
+                    backToTopButton.classList.toggle("show", window.scrollY > 300);
+                }
+            });
+
+            if (backToTopButton) {
+                backToTopButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            }
+
+            // --- CARREGAR O ESTADO AO INICIAR A APLICAÇÃO ---
+            restoreSessionState();
+
+        });
+    </script>
+</body>
+</html>
