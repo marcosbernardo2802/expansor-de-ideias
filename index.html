@@ -64,8 +64,9 @@
                     areaPrincipal.style.marginTop = '0';
                 }
 
-                document.documentElement.style.overflowY = 'hidden';
-                document.body.style.overflowY = 'hidden';
+                // Eixos verticais libertados para permitir o scroll fluido no iframe
+                document.documentElement.style.overflowY = 'auto';
+                document.body.style.overflowY = 'auto';
 
                 let ultimaAltura = 0;
                 function informarAltura() {
